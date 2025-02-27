@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Visitor Management Dashboard</title>
+  <!-- Link to external stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- Include Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <div id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      LOGO IPSUM
+    </div>
+    <ul class="sidebar-menu">
+      <li>Home Page</li>
+      <li>Check In</li>
+      <li>Check Out</li>
+      <li>Watch List</li>
+      <li>Check In Report</li>
+      <li>Summary Report</li>
+      <li>Monitors</li>
+    </ul>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="content" class="content">
+    <div class="header">
+      <span class="toggle-btn" onclick="toggleSidebar()">☰</span>
+      <h2>Dashboard &gt; Homepage</h2>
+    </div>
+
+    <!-- SEARCH PANEL -->
+    <div class="search-panel">
+      <h3>Search Visitors</h3>
+      <form id="searchForm" onsubmit="searchData(event)">
+        <input type="text" id="searchName" placeholder="Name" />
+        <input type="text" id="searchPass" placeholder="Pass Number" />
+        <input type="text" id="searchCompany" placeholder="Company" />
+        <button type="submit">Search</button>
+        <button type="button" onclick="extractData()">Extract Data</button>
+        <button type="button" onclick="window.print()">Print Data</button>
+      </form>
+      <div id="searchResults"></div>
+    </div>
+
+    <!-- DASHBOARD CARDS -->
+    <div class="cards-container">
+      <div class="card">
+        <h3>Watch List</h3>
+        <p>0</p>
+      </div>
+      <div class="card">
+        <h3>Visitors</h3>
+        <p>7</p>
+      </div>
+      <div class="card">
+        <h3>Locations</h3>
+        <p>2</p>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-container">
+      <div class="chart">
+        <h3>Weekly Visit Report</h3>
+        <canvas id="visitChart"></canvas>
+      </div>
+      <div class="chart">
+        <h3>Checkout Summary</h3>
+        <canvas id="checkoutChart"></canvas>
+      </div>
+    </div>
+
+    <!-- VISITOR REGISTRATION (for adding notes/remarks, etc.) -->
+    <div class="registration-panel">
+      <h3>Register Visitor</h3>
+      <form id="registrationForm" onsubmit="registerVisitor(event)">
+        <input type="text" id="regName" placeholder="Name" required />
+        <input type="text" id="regPass" placeholder="Pass Number" required />
+        <input type="text" id="regCompany" placeholder="Company" required />
+        <input type="text" id="regNRIC" placeholder="NRIC" required />
+        <!-- Additional field for notes/remarks -->
+        <textarea id="regNotes" placeholder="Notes/Remarks (optional)"></textarea>
+        <button type="submit">Register Visitor</button>
+      </form>
+    </div>
+
+    <!-- FOOTER / MAINTENANCE SUPPORT -->
+    <footer class="maintenance">
+      <p>For maintenance support, please contact support@example.com</p>
+    </footer>
+  </div>
+
+  <!-- SCRIPT SECTION -->
+  <script>
+    // Collapsible sidebar logic
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const content = document.getElementById('content');
+      sidebar.classList.toggle('collapsed');
+      content.classList.toggle('collapsed');
+    }
+
+    // Initialize "Weekly Visit Report" chart (Bar Chart)
+    const ctxVisit = document.getElementById('visitChart').getContext('2d');
+    const visitChart = new Chart(ctxVisit, {
+      type: 'bar',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+          label: 'Visits',
+          data: [10, 20, 5, 15, 12, 8, 17],
+          backgroundColor: 'rgba(128, 0, 128, 0.7)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Initialize "Checkout Summary" chart (Doughnut Chart)
+    const ctxCheckout = document.getElementById('checkoutChart').getContext('2d');
+    const checkoutChart = new Chart(ctxCheckout, {
+      type: 'doughnut',
+      data: {
+        labels: ['Check In', 'Check Out'],
+        datasets: [{
+          data: [50, 50],
+          backgroundColor: ['#4e73df', '#1cc88a']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+
+    // Sample in-memory array to simulate visitor data (replace with API/backend integration)
+    const visitors = [];
+
+    // Function to register a visitor (includes pass number, company, and notes)
+    function registerVisitor(event) {
+      event.preventDefault();
+      const name = document.getElementById('regName').value;
+      const passNumber = document.getElementById('regPass').value;
+      const company = document.getElementById('regCompany').value;
+      const nric = document.getElementById('regNRIC').value;
+      const notes = document.getElementById('regNotes').value;
+      const timeIn = new Date(); // record current time as Time-In
+
+      // Simulate saving to the database by adding to our array
+      const visitor = { name, passNumber, company, nric, notes, timeIn };
+      visitors.push(visitor);
+
+      // Alert if notes/remarks exist for the profile
+      if (notes.trim() !== "") {
+        alert("Note: This profile includes additional remarks.");
+      }
+
+      alert("Visitor registered successfully!");
+      document.getElementById('registrationForm').reset();
+    }
+
+    // Function to search data by Name, Pass Number, and Company
+    function searchData(event) {
+      event.preventDefault();
+      const searchName = document.getElementById('searchName').value.toLowerCase();
+      const searchPass = document.getElementById('searchPass').value.toLowerCase();
+      const searchCompany = document.getElementById('searchCompany').value.toLowerCase();
+
+      const results = visitors.filter(visitor => {
+        return (
+          visitor.name.toLowerCase().includes(searchName) &&
+          visitor.passNumber.toLowerCase().includes(searchPass) &&
+          visitor.company.toLowerCase().includes(searchCompany)
+        );
+      });
+
+      displaySearchResults(results);
+    }
+
+    function displaySearchResults(results) {
+      const resultsContainer = document.getElementById('searchResults');
+      resultsContainer.innerHTML = "";
+      if (results.length === 0) {
+        resultsContainer.innerHTML = "<p>No matching visitors found.</p>";
+        return;
+      }
+      const table = document.createElement("table");
+      const headerRow = document.createElement("tr");
+      ["Name", "Pass Number", "Company", "Time-In", "Notes"].forEach(headerText => {
+        const th = document.createElement("th");
+        th.innerText = headerText;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+      
+      results.forEach(visitor => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${visitor.name}</td>
+          <td>${visitor.passNumber}</td>
+          <td>${visitor.company}</td>
+          <td>${new Date(visitor.timeIn).toLocaleString()}</td>
+          <td>${visitor.notes}</td>
+        `;
+        table.appendChild(row);
+      });
+      resultsContainer.appendChild(table);
+    }
+
+    // Function to extract data (simulate export to CSV)
+    function extractData() {
+      if (visitors.length === 0) {
+        alert("No visitor data to extract.");
+        return;
+      }
+      // Build CSV string
+      let csv = "Name,Pass Number,Company,NRIC,Time-In,Notes\r\n";
+      visitors.forEach(visitor => {
+        csv += `"${visitor.name}","${visitor.passNumber}","${visitor.company}","${visitor.nric}","${new Date(visitor.timeIn).toLocaleString()}","${visitor.notes}"\r\n`;
+      });
+      // Trigger file download (basic implementation)
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "visitor_data.csv");
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Function to simulate checkout, which checks duration from Time-In
+    function checkoutVisitor(visitor) {
+      const now = new Date();
+      const timeIn = new Date(visitor.timeIn);
+      const durationHours = (now - timeIn) / (1000 * 60 * 60);
+      if (durationHours > 12) {
+        alert("Alert: This visitor's duration exceeds 12 hours from Time-In.");
+      }
+      // Additional checkout logic would go here
+    }
+  </script>
+</body>
+</html>
