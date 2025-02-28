@@ -1,10 +1,34 @@
+// main.js
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const db = require('./database');
 const { validateNRIC } = require('./nricValidator');
+// Optional: require encryption here if needed
+// const { encrypt, decrypt } = require('./encryption');
 
-function createWindow() {
-  const win = new BrowserWindow({
+let loginWindow;
+let mainWindow;
+
+function createLoginWindow() {
+  loginWindow = new BrowserWindow({
+    width: 520,
+    height: 620,
+    resizable: false,
+    autoHideMenuBar: true,
+    frame: false,
+    transparent: true,
+    hasShadow: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-login.js'),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  loginWindow.loadFile('login.html');
+}
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
@@ -13,57 +37,68 @@ function createWindow() {
       contextIsolation: true
     }
   });
-  win.loadFile('index.html');
+  mainWindow.loadFile('index.html');
 }
 
 app.whenReady().then(async () => {
-  await db.initialize(); // Initialize connection to SQL Express and ensure tables exist
-  createWindow();
+  await db.initialize();
+  createLoginWindow();
 
-  // Periodic cleanup for PDPA compliance (delete records older than 3 months from last visit)
+  // Periodic cleanup for PDPA compliance
   setInterval(() => {
     db.cleanupExpiredVisitors();
-  }, 24 * 60 * 60 * 1000); // every 24 hours
+  }, 24 * 60 * 60 * 1000);
 
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      // If no window exists, open the login window
+      createLoginWindow();
+    }
   });
 });
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC handlers for renderer communication
+// IPC handler for login (to be called from the login window)
+ipcMain.handle('login', async (event, credentials) => {
+  // Replace this with your actual authentication logic
+  if (credentials.username === 'admin' && credentials.password === 'password') {
+    if (loginWindow) {
+      loginWindow.close();
+      loginWindow = null;
+    }
+    createMainWindow();
+    return { success: true };
+  } else {
+    return { success: false, message: "Invalid username or password" };
+  }
+});
 
+// IPC handlers for your main app
 ipcMain.handle('addVisitor', async (event, visitorData) => {
   // Validate NRIC first
   if (!validateNRIC(visitorData.nric)) {
     throw new Error("Invalid NRIC");
   }
-  try {
-    const visitorId = await db.addVisitor(visitorData);
-    // Log the visitor "IN" action after successful registration
-    await db.addLog(visitorId, 'IN');
-    return visitorId;
-  } catch (err) {
-    throw err;
-  }
+  // If you want to encrypt here, do so before calling db.addVisitor
+  // visitorData.nric = encrypt(visitorData.nric);
+  // visitorData.name = encrypt(visitorData.name);
+
+  const visitorId = await db.addVisitor(visitorData);
+  await db.addLog(visitorId, 'IN');
+  return visitorId;
 });
 
 ipcMain.handle('addLog', async (event, visitorId, action) => {
-  try {
-    await db.addLog(visitorId, action);
-  } catch (err) {
-    throw err;
-  }
+  await db.addLog(visitorId, action);
 });
 
 ipcMain.handle('getLogs', async (event, searchQuery) => {
-  try {
-    const logs = await db.getLogs(searchQuery);
-    return logs;
-  } catch (err) {
-    throw err;
-  }
+  return db.getLogs(searchQuery);
+});
+
+ipcMain.handle('exit', async () => {
+  app.quit();
 });

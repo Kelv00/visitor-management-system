@@ -1,0 +1,19 @@
+{
+  "name": "visitor-management-system",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "description": "Visitor Management System with NRIC Validator and PDPA 3-month expiry for Singapore",
+  "main": "main.js",
+  "packages": {},
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "chart.js": "^4.4.8",
+    "electron": "^34.3.0",
+    "github": "^14.0.0",
+    "mssql": "^11.0.1",
+    "node.js": "^0.0.1-security"
+  }
+}
